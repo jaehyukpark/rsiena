@@ -1,109 +1,119 @@
-#!/usr/bin/env Rscript
-args = commandArgs(trailingOnly=TRUE)
-
-# Import libraries
+# Load libraries
 library(igraph)
-library(abind)
 library(RSiena)
 
-# Test if there are two arguments
-if (length(args)!=2) {
-    stop("Two arguments (all or top) and (1, 2, or 3 for period) 
-         are required.", call.=FALSE)
-}
-else {
-    cat <- args[1]
-    period <- args[2]
-}
+# Set Beginning year of the period
+args <- commandArgs(trailingOnly=TRUE)
+period <- args[1]
 
 # Set working directory
-dpath <- paste(c('~/GitRepo/artist_network/rsiena/', cat, '_unique_id/p', period),
-               collapse='')
+dpath <- paste(c('~/GitRepo/artist_network/data/all_unique_id/p', period), collapse='')
 setwd(dpath)
 
-# Setting depending on argument values
-# Top or All
-if (args[1]=='top') {N = 100} 
-else {N = 1000}
+# Generate market, professional graph
+m1 <- graph.data.frame(read.table("market_all_1.dat", header=F), directed=F)
+m1 <- add_vertices(m1, 1000-gorder(m1))
+m2 <- graph.data.frame(read.table("market_all_2.dat", header=F), directed=F)
+m2 <- add_vertices(m2, 1000-gorder(m2))
+m3 <- graph.data.frame(read.table("market_all_3.dat", header=F), directed=F)
+m3 <- add_vertices(m3, 1000-gorder(m3))
+m4 <- graph.data.frame(read.table("market_all_4.dat", header=F), directed=F)
+m4 <- add_vertices(m4, 1000-gorder(m4))
+m5 <- graph.data.frame(read.table("market_all_5.dat", header=F), directed=F)
+m5 <- add_vertices(m5, 1000-gorder(m5))
 
-# Period
-if (args[2]==1){yrs=c('2001', '2002', '2003', '2004', '2005')}
-else if (args[2]==2){yrs=c('2006', '2007', '2008', '2009', '2010')}
-else {yrs=c('2011', '2012', '2013', '2014', '2015')}
+p1 <- graph.data.frame(read.table("pro_all_1.dat", header=F), directed=F)
+p1 <- add_vertices(p1, 1000-gorder(p1))
+p2 <- graph.data.frame(read.table("pro_all_2.dat", header=F), directed=F)
+p2 <- add_vertices(p2, 1000-gorder(p2))
+p3 <- graph.data.frame(read.table("pro_all_3.dat", header=F), directed=F)
+p3 <- add_vertices(p3, 1000-gorder(p3))
+p4 <- graph.data.frame(read.table("pro_all_4.dat", header=F), directed=F)
+p4 <- add_vertices(p4, 1000-gorder(p4))
+p5 <- graph.data.frame(read.table("pro_all_5.dat", header=F), directed=F)
+p5 <- add_vertices(p5, 1000-gorder(p5))
 
 
-# Data Prep ------------------------------------------------------------------------
-# Generate market network
-mk_list <- list()
-for(yr in yrs) {
-  dname <- paste(c("market_", cat "_", yr, ".dat"), collapse = '')
-  edgelist <- as.matrix(read.table(dname, header=F))
-  
-  g = make_empty_graph(n=N, directed = FALSE)
-  g = graph_from_edgelist(edgelist, directed = FALSE)
-  adj_mat <- get.adjacency(g, sparse = FALSE, type = 'both')
-  mat <- as.matrix(adj_mat)
-  market_list[[i]] <- mat
-}
-market_net <- abind(market_list, along=3)
+# To get the adjacency matrix from the network(unweighted; Siena does not allow weighted matrix)
+mg1 = as.matrix(as_adjacency_matrix(m1, attr=NULL, sparse=T))
+mg2 = as.matrix(as_adjacency_matrix(m2, attr=NULL, sparse=T))
+mg3 = as.matrix(as_adjacency_matrix(m3, attr=NULL, sparse=T))
+mg4 = as.matrix(as_adjacency_matrix(m4, attr=NULL, sparse=T))
+mg5 = as.matrix(as_adjacency_matrix(m5, attr=NULL, sparse=T))
 
-# Generate professional network
-prof_list <- list()
-for(yr in yrs) {
-  dname <- paste(c("pro_", cat "_", yr, ".dat"), collapse = '')
-  edgelist <- as.matrix(read.table(dname, header=F))
-  
-  g = make_empty_graph(n=N, directed = FALSE)
-  g = graph_from_edgelist(edgelist, directed = FALSE)
-  adj_mat <- get.adjacency(g, sparse = FALSE, type = 'both')
-  mat <- as.matrix(adj_mat)
-  prof_list[[i]] <- mat
-}
-prof_net <- abind(prof_list, along=3)
+pg1 = as.matrix(as_adjacency_matrix(p1, attr=NULL, sparse=T))
+pg2 = as.matrix(as_adjacency_matrix(p2, attr=NULL, sparse=T))
+pg3 = as.matrix(as_adjacency_matrix(p3, attr=NULL, sparse=T))
+pg4 = as.matrix(as_adjacency_matrix(p4, attr=NULL, sparse=T))
+pg5 = as.matrix(as_adjacency_matrix(p5, attr=NULL, sparse=T))
 
-# Siena ------------------------------------------------------------------------
+# Put network data in an array with dimensions N x N x T where:
+# N is the number of nodes in the network (here, # of artists 100) 
+# and T is the number of time points/kind of network (here 2)
+
+mnet <-array(c(mg1, mg2, mg3, mg4, mg5), dim=c(1000,1000,5))
+pnet <-array(c(pg1, pg2, pg3, pg4, pg5), dim=c(1000,1000,5))
+
 # Prepare covariates data for RSiena
-generate_var <- function(varname){
-    fname <- paste(c(varname, "_", cat, ".dat"), collapse = '')
-    return varCovar(as.matrix(read.table(fname)))
-}
-age <- generate_var("age")
-ranking <- generate_var("ranking")
-soloshow <- generate_var("soloshow")
-award <- generate_var("award")
-meanprice <- generate_var("meanprice")
-festbiennal <- generate_var("festbiennal")
-publicinst <- generate_var("publicinst")
-countyear <- generate_var("countyear")
-groupshow <- generate_var("groupshow")
+# age.vc <- varCovar(age)
+ranking <- varCovar(as.matrix(read.table("ranking_all.dat")))
+soloshow <- varCovar(as.matrix(read.table("soloshow_all.dat")))
+award <- varCovar(as.matrix(read.table("award_all.dat")))
+meanprice <- varCovar(as.matrix(read.table("meanprice_all.dat")))
+festbiennal <- varCovar(as.matrix(read.table("festbiennal_all.dat")))
+publicinst <- varCovar(as.matrix(read.table("publicinst_all.dat")))
+countyear <- varCovar(as.matrix(read.table("countyear_all.dat")))
+groupshow <- varCovar(as.matrix(read.table("groupshow_all.dat")))
 
 # Create a Siena network object with sienaNet()
-m_net <- sienaDependent(market_net)
-p_net <- sienaDependent(prof_net)
+mnet <- sienaDependent(mnet)
+pnet <- sienaDependent(pnet)
 
 #Data Create
-v_list <- sienaDataCreate(m_net, p_net, age, award, meanprice, ranking, soloshow, 
-                          festbiennal, publicinst, countyear, groupshow)
-print01Report(v_list)
+data <- sienaDataCreate(mnet, pnet, award, meanprice, ranking, soloshow, 
+                                   festbiennal, publicinst, countyear, groupshow)
+
+#get an outline of the data set with some basic descriptives from
+print(data)
+
+####   Running the model and looking at results                           ####
+####                                                                      ####
 
 # For the model specification we need to create the effects object
-effs <- getEffects(v_list)
+effs <- getEffects(data)
 
-# Adding between-networks(multiple networks) effects
-effs <- includeEffects(effs, crprod, name='m_net', interacton='p_net')
-effs <- includeEffects(effs, crprod, name='p_net', interacton='m_net')
+#adding between-networks(multiple networks) effects
+effs <- includeEffects(effs, crprod, name="mnet",interaction1="mnet")
+effs <- includeEffects(effs, crprod, name="pnet",interaction1="pnet")
 
-# Adding covariates
-for (net in c("m_net", "p_net")) {
-    for (covar in c("age", "ranking", "soloshow", "award", "meanprice", 
-                   "festbiennal", "publicinst", "countyear", "groupshow")) {
-       effs <- includeEffects(effs, egoPlusAltX, simX, interaction1=covar, name=net)
-    }
- }
+#adding covariate effects
+effs <- includeEffects(effs, egoPlusAltX, simX, interaction1="ranking", name="mnet")
+effs <- includeEffects(effs, egoPlusAltX, simX, interaction1="soloshow", name="mnet")
+effs <- includeEffects(effs, egoPlusAltX, simX, interaction1="award", name="mnet")
+effs <- includeEffects(effs, egoPlusAltX, simX, interaction1="meanprice", name="mnet")
+effs <- includeEffects(effs, egoPlusAltX, simX, interaction1="festbiennal", name="mnet")
+effs <- includeEffects(effs, egoPlusAltX, simX, interaction1="publicinst", name="mnet")
+effs <- includeEffects(effs, egoPlusAltX, simX, interaction1="countyear", name="mnet")
+effs <- includeEffects(effs, egoPlusAltX, simX, interaction1="groupshow", name="mnet")
 
-# Running Siena -----------------------------------------------------------
-prj_name = paste(c('siena_',cat,'_',period), collapse='')
-siena_model <- sienaAlgorithmCreate(projname=prj_name, n3=1000, nsub=3)
-siena_result <- siena07(siena_model, data=v_list, useClust=TRUE, nbrNodes=28,
-                        initC=TRUE, effects=effs)
-xtable(siena_result, file=paste(c(prj_name, '.html'), collapse=''), type='html')
+effs <- includeEffects(effs, egoPlusAltX, simX, interaction1="ranking", name="pnet")
+effs <- includeEffects(effs, egoPlusAltX, simX, interaction1="soloshow", name="pnet")
+effs <- includeEffects(effs, egoPlusAltX, simX, interaction1="award", name="pnet")
+effs <- includeEffects(effs, egoPlusAltX, simX, interaction1="meanprice", name="pnet")
+effs <- includeEffects(effs, egoPlusAltX, simX, interaction1="festbiennal", name="pnet")
+effs <- includeEffects(effs, egoPlusAltX, simX, interaction1="publicinst", name="pnet")
+effs <- includeEffects(effs, egoPlusAltX, simX, interaction1="countyear", name="pnet")
+effs <- includeEffects(effs, egoPlusAltX, simX, interaction1="groupshow", name="pnet")
+
+#model running
+proj = paste(c('two_net_model_period_', period), collapse='')
+outf_html = paste(c('result_two_net_model_period_', period, '.html'), collapse='')
+outf_tex = paste(c('result_two_net_model_period_', period, '.tex'), collapse='')
+result <- sienaAlgorithmCreate(projname = proj)
+result <- siena07(result, data=data, useClust=TRUE, nbrNodes=28, initC=TRUE, effects = effs)
+xtable(result, file=outf_html, type="html")
+xtable(result, file=outf_tex, type="html")
+
+
+
+
