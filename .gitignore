@@ -38,4 +38,8 @@ rsconnect/
 # Python
 *.pyc
 
+# Data files
+*.dat
 
+# Rsiena
+*.out
