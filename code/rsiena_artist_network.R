@@ -1,13 +1,20 @@
 # Load libraries
 library(igraph)
 library(RSiena)
+library(methods)
+library(parallel)
+
+# Generate a cluster
+no_cores <- detectCores() - 1
+siena_cl <- makeCluster(no_cores)
+print(no_cores)
 
 # Set Beginning year of the period
 args <- commandArgs(trailingOnly=TRUE)
 period <- args[1]
 
 # Set working directory
-dpath <- paste(c('~/GitRepo/artist_network/data/all_unique_id/p', period), collapse='')
+dpath <- paste(c('../data/all_unique_id/p', period), collapse='')
 setwd(dpath)
 
 # Generate market, professional graph
@@ -110,9 +117,14 @@ proj = paste(c('two_net_model_period_', period), collapse='')
 outf_html = paste(c('result_two_net_model_period_', period, '.html'), collapse='')
 outf_tex = paste(c('result_two_net_model_period_', period, '.tex'), collapse='')
 result <- sienaAlgorithmCreate(projname = proj)
-result <- siena07(result, data=data, useClust=TRUE, nbrNodes=28, initC=TRUE, effects = effs)
+stime = Sys.time()
+print(stime)
+result <- siena07(result, data=data, effects=effs, batch=TRUE, cl=siena_cl)
 xtable(result, file=outf_html, type="html")
-xtable(result, file=outf_tex, type="html")
+xtable(result, file=outf_tex, type="latex")
+etime = Sys.time()
+print(etime)
+print(etime-stime)
 
 
 
