@@ -1,6 +1,6 @@
 #!/bin/bash
 
-#SBATCH -t 72:00:00
+#SBATCH -t 48:00:00
 #SBATCH --mem=20GB
 #SBATCH --exclusive
 #SBATCH -n 1
